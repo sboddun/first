@@ -45,7 +45,7 @@ public class CustomerRestService extends RouteBuilder {
             "sql:INSERT INTO customer_requests (customer_id, start_date, end_date, page, rec_limit) "
                 + "VALUES (:#${body.customerId}, :#${body.startDate}, :#${body.endDate}, :#${body.page}, :#${body.limit})?dataSource=#dataSource")
         .log("Customer request saved successfully")
-        .setBody(constant("User created successfully"));
+        .setBody(constant("Customer request created successfully"));
   }
 
   private void configureExceptionHandlers() {
