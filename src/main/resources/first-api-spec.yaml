@@ -1,0 +1,409 @@
+openapi: 3.0.3
+info:
+  title: Customer API
+  description: API for retrieving customer information with filtering capabilities
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@example.com
+
+servers:
+  - url: http://localhost:8080/data-share/v1
+    description: Production server
+  - url: https://staging-api.example.com/data-share/v1
+    description: Staging server
+  - url: http://localhost:8080/data-share/v1
+    description: Local development server
+
+paths:
+  /customers/{customerId}:
+    get:
+      summary: Get customer details
+      description: Retrieves customer information based on customer ID with optional filtering parameters
+      operationId: getCustomerById
+      tags:
+        - Customers
+      parameters:
+        - name: customerId
+          in: path
+          required: true
+          description: Unique identifier for the customer
+          schema:
+            type: string
+          example: "CUST12345"
+        
+        - name: startDate
+          in: query
+          required: false
+          description: Start date for filtering customer data in ISO 8601 format
+          schema:
+            type: string
+            format: date-time
+            pattern: '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$'
+          example: "2024-01-01T00:00:00.000Z"
+        
+        - name: endDate
+          in: query
+          required: false
+          description: End date for filtering customer data in ISO 8601 format
+          schema:
+            type: string
+            format: date-time
+            pattern: '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$'
+          example: "2024-12-31T23:59:59.999Z"
+        
+        - name: page
+          in: query
+          required: false
+          description: Page number for pagination (starts from 1)
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          example: 1
+        
+        - name: limit
+          in: query
+          required: false
+          description: Number of records per page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+            default: 50
+          example: 100
+      
+      responses:
+        '200':
+          description: Successful response with customer details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerResponse'
+              examples:
+                successExample:
+                  value:
+                    name: "John Doe"
+                    address: "123 Main Street, New York, NY 10001"
+                    age: 34
+                    dob: "1990-05-15T08:30:00.000Z"
+        
+        '400':
+          description: Bad Request - Invalid input parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidDate:
+                  value:
+                    error: "Bad Request"
+                    message: "Invalid date format. Expected ISO 8601 format YYYY-MM-DDThh:mm:ss.mmmZ"
+                    code: 400
+                    timestamp: "2024-01-21T10:30:00.000Z"
+        
+        '401':
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                unauthorized:
+                  value:
+                    error: "Unauthorized"
+                    message: "Authentication credentials are missing or invalid"
+                    code: 401
+                    timestamp: "2024-01-21T10:30:00.000Z"
+        
+        '403':
+          description: Forbidden - Access denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                forbidden:
+                  value:
+                    error: "Forbidden"
+                    message: "You do not have permission to access this resource"
+                    code: 403
+                    timestamp: "2024-01-21T10:30:00.000Z"
+        
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                serverError:
+                  value:
+                    error: "Internal Server Error"
+                    message: "An unexpected error occurred while processing your request"
+                    code: 500
+                    timestamp: "2024-01-21T10:30:00.000Z"
+
+components:
+  schemas:
+    CustomerResponse:
+      type: object
+      required:
+        - name
+        - address
+        - age
+        - dob
+      properties:
+        name:
+          type: string
+          description: Full name of the customer
+          example: "John Doe"
+        address:
+          type: string
+          description: Complete address of the customer
+          example: "123 Main Street, New York, NY 10001"
+        age:
+          type: integer
+          format: int32
+          description: Age of the customer
+          example: 34
+        dob:
+          type: string
+          format: date-time
+          description: Date of birth in ISO 8601 format
+          pattern: '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$'
+          example: "1990-05-15T08:30:00.000Z"
+    
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+        - code
+        - timestamp
+      properties:
+        error:
+          type: string
+          description: Error type/title
+          example: "Bad Request"
+        message:
+          type: string
+          description: Detailed error message
+          example: "Invalid date format"
+        code:
+          type: integer
+          description: HTTP status code
+          example: 400
+        timestamp:
+          type: string
+          format: date-time
+          description: Timestamp when the error occurred
+          example: "2024-01-21T10:30:00.000Z"
+
+  servers:
+    - url: https://api.example.com/v1/myapis
+      description: Production server
+    - url: https://staging-api.example.com/v1/myapis
+      description: Staging server
+  
+  paths:
+    /customers/{customerId}:
+      get:
+        summary: Get customer details
+        description: Retrieves customer information based on customer ID with optional filtering parameters
+        operationId: getCustomerById
+        tags:
+          - Customers
+        parameters:
+          - name: customerId
+            in: path
+            required: true
+            description: Unique identifier for the customer
+            schema:
+              type: string
+            example: "CUST12345"
+          
+          - name: startDate
+            in: query
+            required: false
+            description: Start date for filtering customer data in ISO 8601 format
+            schema:
+              type: string
+              format: date-time
+              pattern: '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$'
+            example: "2024-01-01T00:00:00.000Z"
+          
+          - name: endDate
+            in: query
+            required: false
+            description: End date for filtering customer data in ISO 8601 format
+            schema:
+              type: string
+              format: date-time
+              pattern: '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$'
+            example: "2024-12-31T23:59:59.999Z"
+          
+          - name: type
+            in: query
+            required: false
+            description: Type of customer data to retrieve (e.g., personal, business, premium)
+            schema:
+              type: string
+            example: "personal"
+          
+          - name: page
+            in: query
+            required: false
+            description: Page number for pagination (starts from 1)
+            schema:
+              type: integer
+              minimum: 1
+              default: 1
+            example: 1
+          
+          - name: limit
+            in: query
+            required: false
+            description: Number of records per page
+            schema:
+              type: integer
+              minimum: 1
+              maximum: 500
+              default: 50
+            example: 100
+        
+        responses:
+          '200':
+            description: Successful response with customer details
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/CustomerResponse'
+                examples:
+                  successExample:
+                    value:
+                      name: "John Doe"
+                      address: "123 Main Street, New York, NY 10001"
+                      salary: 75000.50
+                      dob: "1990-05-15T08:30:00.000Z"
+          
+          '400':
+            description: Bad Request - Invalid input parameters
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/ErrorResponse'
+                examples:
+                  invalidDate:
+                    value:
+                      error: "Bad Request"
+                      message: "Invalid date format. Expected ISO 8601 format YYYY-MM-DDThh:mm:ss.mmmZ"
+                      code: 400
+                      timestamp: "2024-01-21T10:30:00.000Z"
+          
+          '401':
+            description: Unauthorized - Authentication required
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/ErrorResponse'
+                examples:
+                  unauthorized:
+                    value:
+                      error: "Unauthorized"
+                      message: "Authentication credentials are missing or invalid"
+                      code: 401
+                      timestamp: "2024-01-21T10:30:00.000Z"
+          
+          '403':
+            description: Forbidden - Access denied
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/ErrorResponse'
+                examples:
+                  forbidden:
+                    value:
+                      error: "Forbidden"
+                      message: "You do not have permission to access this resource"
+                      code: 403
+                      timestamp: "2024-01-21T10:30:00.000Z"
+          
+          '500':
+            description: Internal Server Error
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/ErrorResponse'
+                examples:
+                  serverError:
+                    value:
+                      error: "Internal Server Error"
+                      message: "An unexpected error occurred while processing your request"
+                      code: 500
+                      timestamp: "2024-01-21T10:30:00.000Z"
+  
+  components:
+    schemas:
+      CustomerResponse:
+        type: object
+        required:
+          - name
+          - address
+          - salary
+          - dob
+        properties:
+          name:
+            type: string
+            description: Full name of the customer
+            example: "John Doe"
+          address:
+            type: string
+            description: Complete address of the customer
+            example: "123 Main Street, New York, NY 10001"
+          salary:
+            type: number
+            format: double
+            description: Annual salary of the customer
+            example: 75000.50
+          dob:
+            type: string
+            format: date-time
+            description: Date of birth in ISO 8601 format
+            pattern: '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$'
+            example: "1990-05-15T08:30:00.000Z"
+      
+      ErrorResponse:
+        type: object
+        required:
+          - error
+          - message
+          - code
+          - timestamp
+        properties:
+          error:
+            type: string
+            description: Error type/title
+            example: "Bad Request"
+          message:
+            type: string
+            description: Detailed error message
+            example: "Invalid date format"
+          code:
+            type: integer
+            description: HTTP status code
+            example: 400
+          timestamp:
+            type: string
+            format: date-time
+            description: Timestamp when the error occurred
+            example: "2024-01-21T10:30:00.000Z"
+  
+    securitySchemes:
+      bearerAuth:
+        type: http
+        scheme: bearer
+        bearerFormat: JWT
+  
+  security:
+    - bearerAuth: []

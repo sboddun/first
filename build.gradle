@@ -1,0 +1,79 @@
+plugins {
+	id 'java'
+	id 'war'
+	id 'org.springframework.boot' version '3.3.6'
+	id 'io.spring.dependency-management' version '1.1.7'
+	// id 'com.diffplug.spotless' version '6.25.0'
+}
+
+group = 'com.insulet.practice'
+version = '0.0.1-SNAPSHOT'
+description = 'Demo project for Spring Boot'
+
+ext {
+	camelVersion = '4.14.4'
+}
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(21)
+	}
+}
+
+repositories {
+	mavenCentral()
+}
+
+dependencyManagement {
+	imports {
+		mavenBom "org.apache.camel.springboot:camel-spring-boot-bom:${camelVersion}"
+	}
+}
+
+dependencies {
+	implementation 'org.springframework.boot:spring-boot-starter-actuator'
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+
+	// Apache Camel - versions now managed by BOM
+	implementation 'org.apache.camel.springboot:camel-spring-boot-starter'
+	implementation 'org.apache.camel.springboot:camel-rest-starter'
+	implementation 'org.apache.camel.springboot:camel-jackson-starter'
+	implementation 'org.apache.camel.springboot:camel-http-starter'
+	implementation 'org.apache.camel.springboot:camel-platform-http-starter'
+
+	//postgresql dependencies
+	implementation 'org.apache.camel.springboot:camel-sql-starter'
+	implementation 'org.apache.camel:camel-sql'
+	implementation 'org.postgresql:postgresql:42.7.3'
+	implementation 'org.springframework.boot:spring-boot-starter-jdbc'
+
+	developmentOnly 'org.springframework.boot:spring-boot-devtools'
+	providedRuntime 'org.springframework.boot:spring-boot-starter-tomcat'
+	
+	// Testing dependencies
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+	testImplementation 'org.apache.camel:camel-test-spring-junit5'
+	testRuntimeOnly 'com.h2database:h2'
+}
+
+tasks.named('test') {
+	useJUnitPlatform()
+}
+
+// spotless {
+// 	java {
+// 		// Use Google Java Format
+// 		googleJavaFormat()
+		
+// 		// Remove unused imports
+// 		removeUnusedImports()
+		
+// 		// Format code according to rules
+// 		trimTrailingWhitespace()
+// 		endWithNewline()
+		
+// 		// Target files
+// 		target 'src/**/*.java'
+// 	}
+// }
