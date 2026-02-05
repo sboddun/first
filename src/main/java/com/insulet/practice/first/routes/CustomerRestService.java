@@ -7,17 +7,26 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-import com.insulet.practice.first.GlobalExceptionHandler;
+import com.insulet.practice.first.model.CustomerRequest;
+import com.insulet.practice.first.model.RequestDefaults;
+import com.insulet.practice.first.processors.ServerExceptionProcessor;
+import com.insulet.practice.first.processors.ValidationExceptionProcessor;
 
 @Component
 public class CustomerRestService extends RouteBuilder {
 
   private static final Logger logger = LoggerFactory.getLogger(CustomerRestService.class);
 
-  private final GlobalExceptionHandler globalExceptionHandler;
+  private final ServerExceptionProcessor serverExceptionProcessor;
+  private final ValidationExceptionProcessor validationExceptionProcessor;
+  private final RequestDefaults requestDefaults;
 
-  public CustomerRestService(GlobalExceptionHandler globalExceptionHandler) {
-    this.globalExceptionHandler = globalExceptionHandler;
+  public CustomerRestService(ServerExceptionProcessor serverExceptionProcessor,
+      ValidationExceptionProcessor validationExceptionProcessor,
+      RequestDefaults requestDefaults) {
+    this.serverExceptionProcessor = serverExceptionProcessor;
+    this.validationExceptionProcessor = validationExceptionProcessor;
+    this.requestDefaults = requestDefaults;
   }
 
   @Override
@@ -36,10 +45,12 @@ public class CustomerRestService extends RouteBuilder {
         .log("Fetching customer with ID: ${header.customerId}")
         .process(
             exchange -> {
-              CustomerRequest request = CustomerRequest.fromExchange(exchange);
+              CustomerRequest request = CustomerRequest.fromExchange(exchange, requestDefaults.getLimit());
               logger.info("Received CustomerRequest: {}", request);
               exchange.getIn().setBody(request);
             })
+        .to("bean-validator:validateCustomerRequest")
+        .log("Validation successful for customer request")
         .log("Saving customer request to database ${body.startDate} - ${body.endDate}")
         .to(
             "sql:INSERT INTO customer_requests (customer_id, start_date, end_date, page, rec_limit) "
@@ -49,15 +60,14 @@ public class CustomerRestService extends RouteBuilder {
   }
 
   private void configureExceptionHandlers() {
-    // Handle IllegalArgumentException, respond with HTTP 400
-    onException(IllegalArgumentException.class)
+    // Handle Bean Validation errors, respond with HTTP 400
+    onException(org.apache.camel.ValidationException.class)
         .handled(true)
-        .log("IllegalArgumentException occurred: ${exception.message}")
+        .log("ValidationException occurred: ${exception.message}")
         .log("Stack trace: ${exception.stacktrace}")
-        .setBody(constant("Invalid request parameters"))
         .setHeader("Content-Type", constant("application/json"))
         .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(400))
-        .bean(globalExceptionHandler, "handleBadRequests");
+        .process(validationExceptionProcessor);
 
     onException(Exception.class)
         .handled(true)
@@ -67,12 +77,6 @@ public class CustomerRestService extends RouteBuilder {
         .setBody(constant("Internal server error"))
         .setHeader("Content-Type", constant("application/json"))
         .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(500))
-        .bean(globalExceptionHandler, "handleServerError");
-  }
-
-  public SuccessResponse processCustomers(CustomerRequest request) {
-    // Process customer request
-    logger.info("Processing customer request: {}", request);
-    return new SuccessResponse("John Doe", "123 Main St", 50000.0, "1990-01-01");
+        .process(serverExceptionProcessor);
   }
 }

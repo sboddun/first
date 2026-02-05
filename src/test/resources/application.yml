@@ -1,0 +1,31 @@
+spring:
+  application:
+    name: first-test
+  # H2 database for tests
+  datasource:
+    url: jdbc:h2:mem:testdb
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  # Initialize H2 database
+  sql:
+    init:
+      mode: always
+
+# Camel configuration for tests
+camel:
+  rest:
+    inline-routes: false
+  springboot:
+    main-run-controller: true
+    auto-startup: true
+  component:
+    direct:
+      timeout: 5000
+
+# Camel logging
+logging:
+  level:
+    org:
+      apache:
+        camel: DEBUG

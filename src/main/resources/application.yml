@@ -1,0 +1,57 @@
+spring:
+  application:
+    name: first
+  datasource:
+    url: jdbc:postgresql://localhost:5432/mydb
+    username: admin
+    password: admin
+    driver-class-name: org.postgresql.Driver
+
+# Actuator endpoints for health checks and metrics
+management:
+  endpoints:
+    web:
+      exposure:
+        include: info,health,metrics
+  endpoint:
+    health:
+      show-details: always
+  # Enable Camel metrics
+  metrics:
+    enable:
+      camel: true
+    # Add ECS metadata tags
+    tags:
+      service: ${DD_SERVICE:camel-app}
+      env: ${DD_ENV:production}
+      version: ${DD_VERSION:1.0}
+      '[ecs_task_family]': ${ECS_TASK_FAMILY:unknown}
+      '[ecs_cluster]': ${ECS_CLUSTER:unknown}
+  
+  # Datadog StatsD configuration (sends metrics to sidecar)
+  statsd:
+    metrics:
+      export:
+        enabled: true
+        host: ${DD_AGENT_HOST:localhost}
+        port: 8125
+        flavor: datadog
+
+application:
+  request:
+    defaults:
+      limit: 100
+
+# Logging
+logging:
+  level:
+    org:
+      apache:
+        camel: 
+          component:
+            sql: DEBUG
+      springframework:
+        jdbc:
+          core: 
+            JdbcTemplate: DEBUG
+            StatementCreatorUtils: TRACE

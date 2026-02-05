@@ -1,7 +1,6 @@
 plugins {
 	id 'java'
-	id 'war'
-	id 'org.springframework.boot' version '3.3.6'
+	id 'org.springframework.boot' version '3.5.10'
 	id 'io.spring.dependency-management' version '1.1.7'
 	// id 'com.diffplug.spotless' version '6.25.0'
 }
@@ -46,9 +45,15 @@ dependencies {
 	implementation 'org.apache.camel:camel-sql'
 	implementation 'org.postgresql:postgresql:42.7.3'
 	implementation 'org.springframework.boot:spring-boot-starter-jdbc'
-
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'
-	providedRuntime 'org.springframework.boot:spring-boot-starter-tomcat'
+
+	implementation 'org.apache.camel.springboot:camel-bean-validator-starter'
+	implementation 'org.springframework.boot:spring-boot-starter-validation'
+
+	// Camel Monitoring with Micrometer and Datadog
+	implementation 'org.apache.camel.springboot:camel-micrometer-starter'
+	implementation 'io.micrometer:micrometer-registry-statsd'
+	implementation 'com.datadoghq:dd-trace-api:1.30.1'
 	
 	// Testing dependencies
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
@@ -59,6 +64,12 @@ dependencies {
 
 tasks.named('test') {
 	useJUnitPlatform()
+}
+
+task showDependencies {
+    doLast {
+        configurations.compileClasspath.each { println it.name }
+    }
 }
 
 // spotless {

@@ -1,0 +1,360 @@
+package com.insulet.practice.first.routes;
+
+import org.apache.camel.CamelContext;
+import org.apache.camel.Exchange;
+import org.apache.camel.ProducerTemplate;
+import org.apache.camel.builder.RouteBuilder;
+import org.apache.camel.test.spring.junit5.CamelSpringBootTest;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+
+import com.insulet.practice.first.FirstApplication;
+import com.insulet.practice.first.GlobalExceptionHandler;
+
+@SpringBootTest(classes = FirstApplication.class)
+@CamelSpringBootTest
+public class CustomerRestServiceTest {
+
+  @Autowired
+  private ProducerTemplate producerTemplate;
+
+  @Autowired
+  private CamelContext camelContext;
+
+  @Autowired
+  private GlobalExceptionHandler globalExceptionHandler;
+
+  @Test
+  public void testGetCustomerById_withValidCustomerId_shouldReturnSuccess() throws Exception {
+    String result = producerTemplate.requestBodyAndHeader(
+        "direct:getCustomerById", null, "customerId", "CUST123", String.class);
+
+    assertEquals("User created successfully", result);
+  }
+
+  @Test
+  public void testGetCustomerById_withAllValidQueryParameters_shouldReturnSuccess()
+      throws Exception {
+    String result = producerTemplate.requestBodyAndHeaders(
+        "direct:getCustomerById",
+        null,
+        java.util.Map.of(
+            "customerId", "CUST123",
+            "startDate", "2024-01-01T00:00:00.000Z",
+            "endDate", "2024-12-31T23:59:59.999Z",
+            "page", 1,
+            "limit", 100),
+        String.class);
+
+    assertEquals("User created successfully", result);
+  }
+
+  @Test
+  public void testGetCustomerById_withOnlyRequiredParameter_shouldReturnSuccess() throws Exception {
+    String result = producerTemplate.requestBodyAndHeader(
+        "direct:getCustomerById", null, "customerId", "CUST456", String.class);
+
+    assertEquals("User created successfully", result);
+  }
+
+  @Test
+  public void testGetCustomerById_withValidDates_shouldReturnSuccess() throws Exception {
+    String result = producerTemplate.requestBodyAndHeaders(
+        "direct:getCustomerById",
+        null,
+        java.util.Map.of(
+            "customerId", "CUST789",
+            "startDate", "2024-06-01T12:30:45.123Z",
+            "endDate", "2024-06-30T18:45:30.456Z"),
+        String.class);
+
+    assertEquals("User created successfully", result);
+  }
+
+  @Test
+  public void testGetCustomerById_withMaxLimit_shouldReturnSuccess() throws Exception {
+    String result = producerTemplate.requestBodyAndHeaders(
+        "direct:getCustomerById",
+        null,
+        java.util.Map.of("customerId", "CUST999", "limit", 500),
+        String.class);
+
+    assertEquals("User created successfully", result);
+  }
+
+  @Test
+  public void testGetCustomerById_withZeroPageAndLimit_shouldReturnSuccess() throws Exception {
+    String result = producerTemplate.requestBodyAndHeaders(
+        "direct:getCustomerById",
+        null,
+        java.util.Map.of("customerId", "CUST001", "page", 0, "limit", 0),
+        String.class);
+
+    assertEquals("User created successfully", result);
+  }
+
+  // ===== Validation Error Tests (HTTP 400) =====
+
+  @Test
+  public void testGetCustomerById_withNullCustomerId_shouldReturn400() throws Exception {
+    Exchange exchange = producerTemplate.request(
+        "direct:getCustomerById",
+        ex -> {
+          ex.getIn().setHeader("customerId", null);
+        });
+
+    assertEquals(400, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
+    ErrorResponse errorResponse = exchange.getMessage().getBody(ErrorResponse.class);
+    assertNotNull(errorResponse);
+    assertEquals("400", errorResponse.code());
+    assertEquals("IllegalArgumentException", errorResponse.error());
+    assertTrue(errorResponse.message().contains("Customer ID cannot be null or empty"));
+  }
+
+  @Test
+  public void testGetCustomerById_withEmptyCustomerId_shouldReturn400() throws Exception {
+    Exchange exchange = producerTemplate.request(
+        "direct:getCustomerById",
+        ex -> {
+          ex.getIn().setHeader("customerId", "");
+        });
+
+    assertEquals(400, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
+    ErrorResponse errorResponse = exchange.getMessage().getBody(ErrorResponse.class);
+    assertNotNull(errorResponse);
+    assertEquals("400", errorResponse.code());
+    assertTrue(errorResponse.message().contains("Customer ID cannot be null or empty"));
+  }
+
+  @Test
+  public void testGetCustomerById_withInvalidStartDateFormat_shouldReturn400() throws Exception {
+    Exchange exchange = producerTemplate.request(
+        "direct:getCustomerById",
+        ex -> {
+          ex.getIn().setHeader("customerId", "CUST123");
+          ex.getIn().setHeader("startDate", "2024-01-01");
+        });
+
+    assertEquals(400, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
+    ErrorResponse errorResponse = exchange.getMessage().getBody(ErrorResponse.class);
+    assertNotNull(errorResponse);
+    assertEquals("400", errorResponse.code());
+    assertTrue(errorResponse.message().contains("Invalid startDate format"));
+  }
+
+  @Test
+  public void testGetCustomerById_withInvalidEndDateFormat_shouldReturn400() throws Exception {
+    Exchange exchange = producerTemplate.request(
+        "direct:getCustomerById",
+        ex -> {
+          ex.getIn().setHeader("customerId", "CUST123");
+          ex.getIn().setHeader("endDate", "31/12/2024");
+        });
+
+    assertEquals(400, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
+    ErrorResponse errorResponse = exchange.getMessage().getBody(ErrorResponse.class);
+    assertNotNull(errorResponse);
+    assertEquals("400", errorResponse.code());
+    assertTrue(errorResponse.message().contains("Invalid endDate format"));
+  }
+
+  @Test
+  public void testGetCustomerById_withStartDateAfterEndDate_shouldReturn400() throws Exception {
+    Exchange exchange = producerTemplate.request(
+        "direct:getCustomerById",
+        ex -> {
+          ex.getIn().setHeader("customerId", "CUST123");
+          ex.getIn().setHeader("startDate", "2024-12-31T23:59:59.999Z");
+          ex.getIn().setHeader("endDate", "2024-01-01T00:00:00.000Z");
+        });
+
+    assertEquals(400, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
+    ErrorResponse errorResponse = exchange.getMessage().getBody(ErrorResponse.class);
+    assertNotNull(errorResponse);
+    assertEquals("400", errorResponse.code());
+    assertTrue(errorResponse.message().contains("startDate cannot be after endDate"));
+  }
+
+  @Test
+  public void testGetCustomerById_withNegativePage_shouldReturn400() throws Exception {
+    Exchange exchange = producerTemplate.request(
+        "direct:getCustomerById",
+        ex -> {
+          ex.getIn().setHeader("customerId", "CUST123");
+          ex.getIn().setHeader("page", -1);
+        });
+
+    assertEquals(400, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
+    ErrorResponse errorResponse = exchange.getMessage().getBody(ErrorResponse.class);
+    assertNotNull(errorResponse);
+    assertEquals("400", errorResponse.code());
+    assertTrue(errorResponse.message().contains("Page number cannot be negative"));
+  }
+
+  @Test
+  public void testGetCustomerById_withNegativeLimit_shouldReturn400() throws Exception {
+    Exchange exchange = producerTemplate.request(
+        "direct:getCustomerById",
+        ex -> {
+          ex.getIn().setHeader("customerId", "CUST123");
+          ex.getIn().setHeader("limit", -10);
+        });
+
+    assertEquals(400, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
+    ErrorResponse errorResponse = exchange.getMessage().getBody(ErrorResponse.class);
+    assertNotNull(errorResponse);
+    assertEquals("400", errorResponse.code());
+    assertTrue(errorResponse.message().contains("Limit cannot be negative"));
+  }
+
+  @Test
+  public void testGetCustomerById_withLimitGreaterThan500_shouldReturn400() throws Exception {
+    Exchange exchange = producerTemplate.request(
+        "direct:getCustomerById",
+        ex -> {
+          ex.getIn().setHeader("customerId", "CUST123");
+          ex.getIn().setHeader("limit", 501);
+        });
+
+    assertEquals(400, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
+    ErrorResponse errorResponse = exchange.getMessage().getBody(ErrorResponse.class);
+    assertNotNull(errorResponse);
+    assertEquals("400", errorResponse.code());
+    assertTrue(errorResponse.message().contains("Limit cannot be greater than 500"));
+  }
+
+  @Test
+  public void testGetCustomerById_withDatabaseException_shouldReturn500() throws Exception {
+    // Temporarily stop SQL endpoint to simulate database error
+    camelContext.getRouteController().stopRoute("route1");
+
+    // Create a test route that throws a generic exception
+    camelContext.addRoutes(
+        new RouteBuilder() {
+          @Override
+          public void configure() throws Exception {
+            from("direct:testDatabaseError")
+                .log("Simulating database error")
+                .process(
+                    exchange -> {
+                      throw new RuntimeException("Database connection failed");
+                    });
+          }
+        });
+
+    Exchange exchange = producerTemplate.request(
+        "direct:testDatabaseError",
+        ex -> {
+          ex.getIn().setHeader("customerId", "CUST123");
+        });
+
+    // This will be unhandled by the route, but we can verify exception occurred
+    Exception exception = exchange.getException();
+    assertNotNull(exception);
+    assertTrue(exception.getMessage().contains("Database connection failed"));
+  }
+
+  @Test
+  public void testProcessCustomers_shouldReturnSuccessResponse() {
+    CustomerRequest request = new CustomerRequest(
+        "CUST123", "2024-01-01T00:00:00.000Z", "2024-12-31T23:59:59.999Z", 1, 100);
+
+    CustomerRestService service = new CustomerRestService(globalExceptionHandler);
+    SuccessResponse response = service.processCustomers(request);
+
+    assertNotNull(response);
+    assertEquals("John Doe", response.name());
+    assertEquals("123 Main St", response.address());
+    assertEquals(50000.0, response.salary());
+    assertEquals("1990-01-01", response.dob());
+  }
+
+  // ===== CustomerRequest.fromExchange() Tests =====
+
+  @Test
+  public void testCustomerRequestFromExchange_withAllHeaders_shouldCreateRequest()
+      throws Exception {
+    Exchange exchange = producerTemplate.request(
+        "direct:testExchangeConversion",
+        ex -> {
+          ex.getIn().setHeader("customerId", "CUST123");
+          ex.getIn().setHeader("startDate", "2024-01-01T00:00:00.000Z");
+          ex.getIn().setHeader("endDate", "2024-12-31T23:59:59.999Z");
+          ex.getIn().setHeader("page", 1);
+          ex.getIn().setHeader("limit", 100);
+        });
+
+    // Add a test route to process the exchange
+    camelContext.addRoutes(
+        new RouteBuilder() {
+          @Override
+          public void configure() throws Exception {
+            from("direct:testExchangeConversion")
+                .process(
+                    ex -> {
+                      CustomerRequest request = CustomerRequest.fromExchange(ex);
+                      ex.getIn().setBody(request);
+                    });
+          }
+        });
+
+    CustomerRequest request = exchange.getMessage().getBody(CustomerRequest.class);
+    assertNotNull(request);
+    assertEquals("CUST123", request.getCustomerId());
+    assertEquals("2024-01-01T00:00:00.000Z", request.getStartDate());
+    assertEquals("2024-12-31T23:59:59.999Z", request.getEndDate());
+    assertEquals(1, request.getPage());
+    assertEquals(100, request.getLimit());
+  }
+
+  // ===== Edge Case Tests =====
+
+  @Test
+  public void testGetCustomerById_withSameDateRange_shouldReturnSuccess() throws Exception {
+    String result = producerTemplate.requestBodyAndHeaders(
+        "direct:getCustomerById",
+        null,
+        java.util.Map.of(
+            "customerId", "CUST999",
+            "startDate", "2024-06-15T12:00:00.000Z",
+            "endDate", "2024-06-15T12:00:00.000Z"),
+        String.class);
+
+    assertEquals("User created successfully", result);
+  }
+
+  @Test
+  public void testGetCustomerById_withOnlyStartDate_shouldReturnSuccess() throws Exception {
+    String result = producerTemplate.requestBodyAndHeaders(
+        "direct:getCustomerById",
+        null,
+        java.util.Map.of("customerId", "CUST888", "startDate", "2024-01-01T00:00:00.000Z"),
+        String.class);
+
+    assertEquals("User created successfully", result);
+  }
+
+  @Test
+  public void testGetCustomerById_withOnlyEndDate_shouldReturnSuccess() throws Exception {
+    String result = producerTemplate.requestBodyAndHeaders(
+        "direct:getCustomerById",
+        null,
+        java.util.Map.of("customerId", "CUST777", "endDate", "2024-12-31T23:59:59.999Z"),
+        String.class);
+
+    assertEquals("User created successfully", result);
+  }
+
+  @Test
+  public void testGetCustomerById_withLargeCustomerId_shouldReturnSuccess() throws Exception {
+    String largeCustomerId = "CUST" + "X".repeat(100);
+    String result = producerTemplate.requestBodyAndHeader(
+        "direct:getCustomerById", null, "customerId", largeCustomerId, String.class);
+
+    assertEquals("User created successfully", result);
+  }
+}

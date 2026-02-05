@@ -1,0 +1,30 @@
+@CamelSpringBootTest
+@SpringBootTest(classes = FirstApplication.class)
+@EnableRouteCoverage
+@Import(TestConfig.class)
+// @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+class CustomerRestServiceTest {
+
+  @Autowired
+  private ProducerTemplate producerTemplate;
+
+  @Autowired
+  private CamelContext camelContext;
+
+  @Autowired(required = false)
+  private CustomerRestService customerRestService;
+
+  @Test
+  void testGetCustomerById_withValidCustomerId_shouldReturnSuccess() throws Exception {
+    System.out.println("Available routes: " + camelContext.getRoutes().size());
+    camelContext.getRoutes().forEach(route -> {
+      System.out.println("Route: " + route.getEndpoint());
+    });
+
+    String result = producerTemplate.requestBodyAndHeader(
+        "direct:getCustomerById?block=true", null, "customerId", "CUST123", String.class);
+
+    assertEquals("Customer request created successfully", result);
+  }
+}
+

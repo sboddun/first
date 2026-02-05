@@ -1,0 +1,5 @@
+{"properties": [{
+  "name": "application.request.defaults.limit",
+  "type": "java.lang.String",
+  "description": "define the default value of request attribute named 'limit'"
+}]}
